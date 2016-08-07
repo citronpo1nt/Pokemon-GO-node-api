@@ -17,6 +17,9 @@ var geocoder = require('geocoder');
 var events = require('events');
 var ProtoBuf = require('protobufjs');
 var GoogleOAuth = require('gpsoauthnode');
+const Long = require('long');
+const ByteBuffer = require('bytebuffer');
+const bignum = require('bignum');
 var fs = require('fs');
 var s2 = require('simple-s2-node');
 
@@ -329,21 +332,26 @@ function Pokeio() {
             return a > b;
         });
 
-        var buffer = new ByteBuffer(21 * 10).LE();
+        var walkLong = [];
         walk.forEach((elem) => {
-            buffer.writeVarint64(s2.S2Utils.long_from_bignum(elem).toString());
+            walkLong.push(s2.S2Utils.long_from_bignum(elem));
         });
 
-        buffer.flip();
         // Creating MessageQuad for Requests type=106
         var walkData = new RequestEnvelop.MessageQuad({
-            'f1': buffer.toBuffer(),
+            'f1': walkLong,
             'f2': nullbytes,
             'lat': self.playerInfo.latitude,
             'long': self.playerInfo.longitude
         });
 
-        var req = [new RequestEnvelop.Requests(106, walkData.encode().toBuffer()), new RequestEnvelop.Requests(126), new RequestEnvelop.Requests(4, new RequestEnvelop.Unknown3(Date.now().toString()).encode().toBuffer()), new RequestEnvelop.Requests(129), new RequestEnvelop.Requests(5, new RequestEnvelop.Unknown3('54b359c97e46900f87211ef6e6dd0b7f2a3ea1f5').encode().toBuffer())];
+        var req = [
+            new RequestEnvelop.Requests(106, walkData.encode().toBuffer()),
+            new RequestEnvelop.Requests(126),
+            new RequestEnvelop.Requests(4, new RequestEnvelop.Unknown3(Date.now().toString()).encode().toBuffer()),
+            new RequestEnvelop.Requests(129),
+            new RequestEnvelop.Requests(5, new RequestEnvelop.Unknown3('54b359c97e46900f87211ef6e6dd0b7f2a3ea1f5').encode().toBuffer())
+        ];
 
         api_req(apiEndpoint, accessToken, req, function (err, f_ret) {
             if (err) {
